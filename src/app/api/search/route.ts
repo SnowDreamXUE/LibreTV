@@ -23,7 +23,7 @@ function searchCacheKey(wd: string, sources: SourceConfig[], filterAdult: boolea
 }
 
 /**
- * 每个源最多抓取的页数（参考 LunaTV 的 SearchDownstreamMaxPage）。
+ * 每个源最多抓取的页数。
  * 第一页响应会带回 pagecount（源站真实总页数），实际抓取页数 = min(pagecount, 该值)。
  * 默认 5；页与页之间并行请求，单页失败只丢弃该页。
  */
@@ -249,7 +249,9 @@ export async function POST(req: Request) {
         sources.map(async (source, i) => {
           const outcome = await searchSource(source, wd);
           outcomes[i] = outcome;
-          send({ type: 'source', ...outcome });
+          // 中间结果与最终结果共用去重和过滤规则，避免无关/成人条目短暂出现在页面上。
+          const { list } = aggregateOutcomes([outcome], wd, filterAdult);
+          send({ type: 'source', ...outcome, list });
         })
       );
 
